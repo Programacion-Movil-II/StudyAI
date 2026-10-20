@@ -1,0 +1,109 @@
+
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F3F0FB">
+
+    <!-- ENCABEZADO -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#FFFFFF"
+        android:padding="20dp"
+        android:elevation="4dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="StudyAI ✨"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="#7149C6" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Tu asistente de estudio inteligente"
+            android:textSize="13sp"
+            android:textColor="#715D89" />
+
+    </LinearLayout>
+
+    <!-- ÁREA DE CONVERSACIÓN -->
+    <ScrollView
+        android:id="@+id/scrollChat"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:padding="16dp">
+
+        <LinearLayout
+            android:id="@+id/layoutChat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- MENSAJE INICIAL -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="start"
+                android:background="#FFFFFF"
+                android:padding="16dp"
+                android:text="¡Hola! Soy StudyAI. ¿Qué te gustaría aprender hoy?"
+                android:textSize="16sp"
+                android:textColor="#24183B" />
+
+        </LinearLayout>
+
+    </ScrollView>
+
+    <!-- INDICADOR DE CARGA -->
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
+    <!-- ÁREA PARA ESCRIBIR -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="#FFFFFF"
+        android:padding="12dp">
+
+        <EditText
+            android:id="@+id/etPregunta"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:minHeight="48dp"
+            android:maxHeight="120dp"
+            android:hint="Escribe tu mensaje..."
+            android:textSize="15sp"
+            android:inputType="textMultiLine|textCapSentences"
+            android:gravity="center_vertical"
+            android:padding="10dp"
+            android:backgroundTint="#7149C6" />
+
+        <Button
+            android:id="@+id/btnEnviar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:text="Enviar ➤"
+            android:textAllCaps="false"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#7149C6" />
+
+    </LinearLayout>
+
+</LinearLayout>
