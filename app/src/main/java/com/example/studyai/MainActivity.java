@@ -5,120 +5,182 @@ import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.Gravity;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.LinearLayout;
-import android.widget.ScrollView;
-import android.widget.TextView;
+import android.view.View;
+import android.widget.*;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.gson.*;
+
+import retrofit2.*;
+import retrofit2.converter.gson.GsonConverterFactory;
+
 public class MainActivity extends AppCompatActivity {
 
-    // Componentes de la interfaz
-    private EditText etPregunta;
-    private Button btnEnviar;
-    private LinearLayout layoutChat;
-    private ScrollView scrollChat;
+    EditText etPregunta;
+    Button btnEnviar;
+    LinearLayout layoutChat;
+    ScrollView scrollChat;
+    ProgressBar progressBar;
+
+    GeminiApiService api;
+
+    String modelo = "gemini-3.5-flash-lite";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Conectar los componentes Java con el XML
+        // Conectar Java con XML
         etPregunta = findViewById(R.id.etPregunta);
         btnEnviar = findViewById(R.id.btnEnviar);
         layoutChat = findViewById(R.id.layoutChat);
         scrollChat = findViewById(R.id.scrollChat);
+        progressBar = findViewById(R.id.progressBar);
 
-        // Evento del botón Enviar
+        // Configurar Retrofit
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl("https://generativelanguage.googleapis.com/")
+                .addConverterFactory(GsonConverterFactory.create())
+                .build();
+
+        api = retrofit.create(GeminiApiService.class);
+
         btnEnviar.setOnClickListener(v -> enviarMensaje());
     }
 
-    // Enviar el mensaje escrito por el usuario
+    // Enviar pregunta del estudiante
     private void enviarMensaje() {
 
-        String pregunta = etPregunta.getText()
-                .toString()
-                .trim();
+        String pregunta = etPregunta.getText().toString().trim();
 
-        // Validar que el mensaje no esté vacío
         if (pregunta.isEmpty()) {
-            etPregunta.setError("Escribe un mensaje");
+            etPregunta.setError("Escribe una pregunta");
             return;
         }
 
-        // Mostrar la pregunta en el chat
         agregarMensaje(pregunta, true);
-
-        // Limpiar el campo de texto
         etPregunta.setText("");
 
-        // Respuesta temporal de prueba
-        // Después conectaremos aquí la API de Gemini
-        agregarMensaje(
-                "¡Hola! Recibí tu pregunta: " + pregunta
-                        + "\n\nPronto podré responderte usando Gemini.",
-                false
-        );
+        consultarGemini(pregunta);
     }
 
-    // Agregar mensajes al chat
-    private void agregarMensaje(String mensaje, boolean esUsuario) {
+    // Consumir el servicio web de Gemini
+    private void consultarGemini(String pregunta) {
 
-        // Crear un TextView para el mensaje
-        TextView tvMensaje = new TextView(this);
+        progressBar.setVisibility(View.VISIBLE);
+        btnEnviar.setEnabled(false);
 
-        tvMensaje.setText(mensaje);
-        tvMensaje.setTextSize(16);
-        tvMensaje.setPadding(32, 24, 32, 24);
-        tvMensaje.setMaxWidth(
-                (int) (getResources().getDisplayMetrics().widthPixels * 0.80f)
-        );
+        // Crear JSON de la petición
+        JsonObject parte = new JsonObject();
+        parte.addProperty("text",
+                "Eres StudyAI, un asistente educativo. " +
+                        "Responde en español de manera clara y sencilla. " +
+                        "Pregunta: " + pregunta);
 
-        // Crear el fondo redondeado del mensaje
+        JsonArray partes = new JsonArray();
+        partes.add(parte);
+
+        JsonObject contenido = new JsonObject();
+        contenido.add("parts", partes);
+
+        JsonArray contenidos = new JsonArray();
+        contenidos.add(contenido);
+
+        JsonObject solicitud = new JsonObject();
+        solicitud.add("contents", contenidos);
+
+        // Petición HTTP POST
+        api.generarRespuesta(
+                modelo,
+                BuildConfig.GEMINI_API_KEY,
+                solicitud
+        ).enqueue(new Callback<JsonObject>() {
+
+            @Override
+            public void onResponse(
+                    Call<JsonObject> call,
+                    Response<JsonObject> response) {
+
+                terminarCarga();
+
+                if (response.isSuccessful() && response.body() != null) {
+                    try {
+                        String respuesta = response.body()
+                                .getAsJsonArray("candidates")
+                                .get(0).getAsJsonObject()
+                                .getAsJsonObject("content")
+                                .getAsJsonArray("parts")
+                                .get(0).getAsJsonObject()
+                                .get("text").getAsString();
+
+                        agregarMensaje(respuesta, false);
+
+                    } catch (Exception e) {
+                        agregarMensaje(
+                                "No se pudo leer la respuesta.",
+                                false);
+                    }
+                } else {
+                    agregarMensaje(
+                            "Error HTTP " + response.code(),
+                            false);
+                }
+            }
+
+            @Override
+            public void onFailure(
+                    Call<JsonObject> call, Throwable t) {
+
+                terminarCarga();
+                agregarMensaje(
+                        "Error de conexión: " + t.getMessage(),
+                        false);
+            }
+        });
+    }
+
+    // Ocultar indicador de carga
+    private void terminarCarga() {
+        progressBar.setVisibility(View.GONE);
+        btnEnviar.setEnabled(true);
+    }
+
+    // Mostrar mensajes en el chat
+    private void agregarMensaje(String texto, boolean usuario) {
+
+        TextView mensaje = new TextView(this);
+        mensaje.setText(texto);
+        mensaje.setTextSize(16);
+        mensaje.setPadding(32, 24, 32, 24);
+        mensaje.setMaxWidth(
+                (int) (getResources().getDisplayMetrics()
+                        .widthPixels * 0.8));
+
+        // Color de la burbuja
         GradientDrawable fondo = new GradientDrawable();
         fondo.setCornerRadius(32);
+        fondo.setColor(Color.parseColor(
+                usuario ? "#7149C6" : "#FFFFFF"));
 
-        if (esUsuario) {
+        mensaje.setTextColor(Color.parseColor(
+                usuario ? "#FFFFFF" : "#24183B"));
 
-            // Mensaje del usuario: violeta
-            fondo.setColor(Color.parseColor("#7149C6"));
-            tvMensaje.setTextColor(Color.WHITE);
+        mensaje.setBackground(fondo);
 
-        } else {
-
-            // Mensaje de StudyAI: blanco
-            fondo.setColor(Color.WHITE);
-            tvMensaje.setTextColor(Color.parseColor("#24183B"));
-        }
-
-        tvMensaje.setBackground(fondo);
-
-        // Configurar posición y márgenes
-        LinearLayout.LayoutParams parametros =
+        // Posición del mensaje
+        LinearLayout.LayoutParams params =
                 new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                );
+                        -2, -2);
 
-        parametros.setMargins(0, 8, 0, 16);
+        params.gravity = usuario ? Gravity.END : Gravity.START;
+        params.setMargins(0, 8, 0, 16);
 
-        if (esUsuario) {
-            parametros.gravity = Gravity.END;
-        } else {
-            parametros.gravity = Gravity.START;
-        }
+        layoutChat.addView(mensaje, params);
 
-        tvMensaje.setLayoutParams(parametros);
-
-        // Agregar el mensaje al contenedor
-        layoutChat.addView(tvMensaje);
-
-        // Desplazar el chat hacia el último mensaje
+        // Desplazar hacia el último mensaje
         scrollChat.post(() ->
-                scrollChat.fullScroll(ScrollView.FOCUS_DOWN)
-        );
+                scrollChat.fullScroll(ScrollView.FOCUS_DOWN));
     }
 }

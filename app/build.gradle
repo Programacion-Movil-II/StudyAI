@@ -2,13 +2,30 @@ plugins {
     alias(libs.plugins.android.application)
 }
 
+// Leer la API Key desde local.properties
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withInputStream { stream ->
+        localProperties.load(stream)
+    }
+}
+
+def geminiApiKey = localProperties.getProperty(
+        "GEMINI_API_KEY", ""
+)
+
 android {
+
     namespace 'com.example.studyai'
+
     compileSdk {
         version = release(36)
     }
 
     defaultConfig {
+
         applicationId "com.example.studyai"
         minSdk 24
         targetSdk 36
@@ -16,26 +33,47 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // Disponible desde Java mediante BuildConfig
+        buildConfigField "String", "GEMINI_API_KEY",
+                "\"${geminiApiKey}\""
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            proguardFiles getDefaultProguardFile(
+                    'proguard-android-optimize.txt'
+            ), 'proguard-rules.pro'
         }
     }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
+
+    // Habilitar la generacin de BuildConfig
+    buildFeatures {
+        buildConfig true
+    }
 }
 
 dependencies {
+
     implementation libs.appcompat
     implementation libs.material
     implementation libs.activity
     implementation libs.constraintlayout
+
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
+
+    // Retrofit: consumo de servicios web REST
+    implementation 'com.squareup.retrofit2:retrofit:3.0.0'
+
+    // Gson: conversion de datos JSON
+    implementation 'com.squareup.retrofit2:converter-gson:3.0.0'
 }
